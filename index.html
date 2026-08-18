@@ -164,9 +164,6 @@
           <h2 class="text-2xl font-bold">Jadwal Imunisasi</h2>
           <p id="vax-sub" class="text-sm text-on-surface-variant mt-1"></p>
         </div>
-        <button onclick="openVaccineModal()" class="no-print shrink-0 w-9 h-9 rounded-full bg-primary text-on-primary flex items-center justify-center mt-1">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-        </button>
       </div>
       <div class="bg-surface rounded-xl2 p-5 shadow-sm">
         <p class="text-xs uppercase tracking-widest text-on-surface-variant">Progres Keseluruhan</p>
@@ -193,7 +190,7 @@
     <section id="panel-reports" class="tab-panel space-y-4 pt-1">
       <div>
         <h2 class="text-2xl font-bold">Laporan</h2>
-        <p class="text-sm text-on-surface-variant mt-1">Ringkasan pertumbuhan, pencapaian, dan imunisasi Leo.</p>
+        <p id="rep-sub" class="text-sm text-on-surface-variant mt-1">Ringkasan pertumbuhan, pencapaian, dan imunisasi.</p>
       </div>
       <div class="flex bg-surface-container rounded-full p-1 text-sm font-semibold w-fit">
         <button id="rep-toggle-monthly" onclick="setReportPeriod('monthly')" class="chip active px-4 py-1.5 rounded-full">Bulanan</button>
@@ -223,8 +220,8 @@
 
   </main>
 
-  <!-- Floating add button (dashboard/journal) -->
-  <button id="fab" onclick="openMilestoneModal()" class="no-print fixed bottom-24 w-14 h-14 rounded-full bg-primary text-on-primary shadow-lg flex items-center justify-center z-30">
+  <!-- Floating add button (dashboard/journal/vaccines) -->
+  <button id="fab" onclick="handleFabClick()" class="no-print fixed bottom-24 w-14 h-14 rounded-full bg-primary text-on-primary shadow-lg flex items-center justify-center z-30">
     <svg class="icon-lg" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
   </button>
 
@@ -308,10 +305,30 @@
   </div>
 </div>
 
+<div id="confirm-modal" class="hidden fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-6">
+  <div class="bg-surface w-full max-w-sm rounded-2xl p-5 space-y-4">
+    <h3 class="font-bold text-lg">Reset semua data?</h3>
+    <p class="text-sm text-on-surface-variant">Semua data pertumbuhan, pencapaian, dan imunisasi akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.</p>
+    <div class="flex gap-3">
+      <button onclick="closeConfirmModal()" class="flex-1 rounded-full py-2.5 text-sm font-semibold border border-outline">Batal</button>
+      <button onclick="confirmResetData()" class="flex-1 bg-error text-on-error rounded-full py-2.5 text-sm font-semibold">Reset</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const STORAGE_KEY = 'jejaksikecil_data_v1';
 
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+function emptyData(){
+  return {
+    profile: { name: 'Bayi', dob: new Date().toISOString().slice(0,10) },
+    measurements: [],
+    milestones: [],
+    vaccines: [],
+  };
+}
 
 function defaultData(){
   const today = new Date();
@@ -389,9 +406,14 @@ function switchTab(tab){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   const map = { dashboard:0, journal:1, vaccines:2, reports:3 };
   if (tab in map) document.querySelectorAll('.nav-btn')[map[tab]].classList.add('active');
-  document.getElementById('fab').style.display = (tab==='dashboard'||tab==='journal') ? 'flex' : 'none';
+  document.getElementById('fab').style.display = (tab==='dashboard'||tab==='journal'||tab==='vaccines') ? 'flex' : 'none';
   window.scrollTo(0,0);
   renderAll();
+}
+
+function handleFabClick(){
+  if (currentTab === 'vaccines') openVaccineModal();
+  else openMilestoneModal();
 }
 
 function setChartMode(mode){ chartMode = mode;
@@ -645,6 +667,7 @@ function deleteVaccine(id){
 }
 
 function renderReports(){
+  document.getElementById('rep-sub').textContent = `Ringkasan pertumbuhan, pencapaian, dan imunisasi ${data.profile.name}.`;
   const period = reportPeriod === 'monthly' ? 'bulan ini' : 'tahun ini';
   const cutoff = new Date();
   if (reportPeriod==='monthly') cutoff.setMonth(cutoff.getMonth()-1); else cutoff.setFullYear(cutoff.getFullYear()-1);
@@ -724,11 +747,18 @@ function saveProfile(){
   save(); closeProfileModal(); renderAll();
 }
 function resetData(){
-  if (confirm('Reset semua data pertumbuhan, pencapaian, dan imunisasi?')){
-    localStorage.removeItem(STORAGE_KEY);
-    data = defaultData();
-    save(); closeProfileModal(); renderAll();
-  }
+  document.getElementById('confirm-modal').classList.remove('hidden');
+}
+function closeConfirmModal(){
+  document.getElementById('confirm-modal').classList.add('hidden');
+}
+function confirmResetData(){
+  localStorage.removeItem(STORAGE_KEY);
+  data = emptyData();
+  save();
+  closeConfirmModal();
+  closeProfileModal();
+  renderAll();
 }
 
 function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
