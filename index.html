@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1">
+<title>Jejak Si Kecil | Pelacak Tumbuh Kembang Bayi</title>
+<meta name="description" content="Catat berat, tinggi, pencapaian, dan jadwal imunisasi si kecil — tersimpan di perangkat Anda, bisa dipakai tanpa internet.">
+<meta name="theme-color" content="#4a654e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Jejak Si Kecil">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+<style>
+  /* Give the app a visible "phone" frame when opened in a wide desktop
+     browser, while staying edge-to-edge (true full-bleed) on real phones. */
+  body { background: #dbe3d8; }
+  #fab { right: 1.25rem; }
+  @media (min-width: 481px) {
+    body {
+      display: flex;
+      justify-content: center;
+      padding: 28px 0;
+      min-height: 100vh;
+    }
+    #app-shell {
+      border-radius: 32px;
+      box-shadow: 0 25px 60px -20px rgba(24,28,28,.35), 0 0 0 1px rgba(24,28,28,.06);
+      min-height: min(844px, calc(100vh - 56px));
+    }
+    #fab { right: max(1.75rem, calc((100vw - 28rem) / 2 + 1.75rem)); }
+  }
+  /* Keep the "next vaccine" card's text clear of the floating + button,
+     which sits at a fixed corner regardless of scroll position. */
+  #dash-next-vaccine { padding-right: 4.5rem; }
+</style>
+</head>
+<body class="text-on-surface">
+
+<div id="app-shell" class="max-w-md mx-auto min-h-screen bg-background relative pb-24">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-20 bg-background/90 backdrop-blur px-5 pt-5 pb-3 flex items-center justify-between">
+    <div class="flex items-center gap-2.5">
+      <div class="w-9 h-9 rounded-full bg-primary-container flex items-center justify-center text-lg">🌿</div>
+      <h1 class="text-lg font-bold tracking-tight">Jejak Si Kecil</h1>
+    </div>
+    <button onclick="openProfileModal()" class="w-9 h-9 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-1.7-1L15 3h-4l-.3 2.6a7.4 7.4 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 0 0 1.7 1L11 21h4l.3-2.6a7.4 7.4 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6Z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+  </header>
+
+  <main class="px-5">
+
+    <!-- ============ DASHBOARD ============ -->
+    <section id="panel-dashboard" class="tab-panel active space-y-4 pt-1">
+      <div class="bg-surface rounded-xl2 p-5 shadow-sm">
+        <p class="text-xs font-bold tracking-widest text-primary uppercase">Ringkasan Hari Ini</p>
+        <h2 id="dash-age-headline" class="text-2xl font-bold mt-1"></h2>
+        <p id="dash-age-sub" class="text-sm text-on-surface-variant mt-1"></p>
+      </div>
+
+      <div class="bg-primary text-on-primary rounded-xl2 p-5 shadow-sm grid grid-cols-2 gap-4">
+        <div>
+          <p class="text-xs uppercase tracking-widest opacity-80">Berat Badan Saat Ini</p>
+          <p class="text-2xl font-bold mt-1"><span id="dash-weight">–</span> <span class="text-sm font-medium">kg</span></p>
+        </div>
+        <div class="border-l border-white/25 pl-4">
+          <p class="text-xs uppercase tracking-widest opacity-80">Tinggi Terakhir</p>
+          <p class="text-2xl font-bold mt-1"><span id="dash-height">–</span> <span class="text-sm font-medium">cm</span></p>
+        </div>
+      </div>
+
+      <div class="bg-surface rounded-xl2 p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-bold text-base">Grafik Pertumbuhan</h3>
+          <div class="flex bg-surface-container rounded-full p-1 text-xs font-semibold">
+            <button id="chart-toggle-weight" onclick="setChartMode('weight')" class="chip active px-3 py-1 rounded-full">Berat</button>
+            <button id="chart-toggle-height" onclick="setChartMode('height')" class="chip px-3 py-1 rounded-full">Tinggi</button>
+          </div>
+        </div>
+        <svg id="growth-chart" viewBox="0 0 320 140" class="w-full h-32"></svg>
+        <div id="chart-labels" class="flex justify-between text-[11px] text-on-surface-variant mt-1"></div>
+        <button onclick="switchTab('growth')" class="mt-4 w-full text-center text-sm font-semibold text-primary py-2 rounded-full border border-outline">Tambah pengukuran</button>
+      </div>
+
+      <div id="dash-next-vaccine" class="bg-surface-container rounded-xl2 p-5 shadow-sm border border-primary-container/40"></div>
+
+      <div>
+        <h3 class="font-bold text-base mb-2">Pencapaian Terbaru</h3>
+        <div id="dash-milestones" class="flex gap-3 overflow-x-auto pb-2"></div>
+      </div>
+    </section>
+
+    <!-- ============ JOURNAL ============ -->
+    <section id="panel-journal" class="tab-panel space-y-4 pt-1">
+      <div>
+        <h2 class="text-2xl font-bold">Jurnal Pencapaian</h2>
+        <p id="journal-sub" class="text-sm text-on-surface-variant mt-1"></p>
+      </div>
+
+      <div class="flex bg-surface-container rounded-full p-1 text-sm font-semibold w-fit">
+        <button id="journal-view-timeline" onclick="setJournalView('timeline')" class="chip active px-4 py-1.5 rounded-full">Linimasa</button>
+        <button id="journal-view-calendar" onclick="setJournalView('calendar')" class="chip px-4 py-1.5 rounded-full">Kalender</button>
+      </div>
+
+      <!-- Timeline view -->
+      <div id="journal-timeline-view" class="journal-view active space-y-4">
+        <div class="relative w-full">
+          <select id="journal-filter-select" onchange="setJournalFilter(this.value)" class="w-full appearance-none rounded-xl2 border border-outline bg-surface pl-4 pr-10 py-3 text-sm font-semibold text-on-surface"></select>
+          <svg class="icon-sm pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div id="journal-timeline" class="space-y-4 relative pl-1"></div>
+        <p id="journal-empty" class="hidden text-center text-sm text-on-surface-variant py-10">Belum ada pencapaian — tekan + untuk menambahkan yang pertama.</p>
+      </div>
+
+      <!-- Calendar view -->
+      <div id="journal-calendar-view" class="journal-view space-y-4">
+        <div class="bg-surface rounded-xl2 p-4 shadow-sm">
+          <div class="flex items-center justify-between mb-3">
+            <button onclick="shiftCalendarMonth(-1)" class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-container">
+              <svg class="icon-sm" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <h3 id="cal-month-label" class="font-bold text-sm"></h3>
+            <button onclick="shiftCalendarMonth(1)" class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-container">
+              <svg class="icon-sm" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+          </div>
+          <div class="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold text-on-surface-variant mb-1">
+            <span>M</span><span>S</span><span>S</span><span>R</span><span>K</span><span>J</span><span>S</span>
+          </div>
+          <div id="cal-grid" class="grid grid-cols-7 gap-1"></div>
+        </div>
+        <div>
+          <h3 id="cal-selected-label" class="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-2"></h3>
+          <div id="cal-selected-list" class="space-y-3"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ GROWTH (measurement log, reached via dashboard) ============ -->
+    <section id="panel-growth" class="tab-panel space-y-4 pt-1">
+      <h2 class="text-2xl font-bold">Catatan Pertumbuhan</h2>
+      <div class="bg-surface rounded-xl2 p-5 shadow-sm space-y-3">
+        <h3 class="font-bold text-sm">Tambah pengukuran</h3>
+        <div class="grid grid-cols-2 gap-3">
+          <input id="g-weight" type="number" step="0.1" placeholder="Berat (kg)" class="rounded-lg border border-outline px-3 py-2 text-sm">
+          <input id="g-height" type="number" step="0.1" placeholder="Tinggi (cm)" class="rounded-lg border border-outline px-3 py-2 text-sm">
+        </div>
+        <input id="g-date" type="date" class="w-full rounded-lg border border-outline px-3 py-2 text-sm">
+        <input id="g-label" type="text" placeholder="Label (mis. Kontrol 6 bulan)" class="w-full rounded-lg border border-outline px-3 py-2 text-sm">
+        <button onclick="addMeasurement()" class="w-full bg-primary text-on-primary rounded-full py-2.5 text-sm font-semibold">Simpan pengukuran</button>
+      </div>
+      <div id="growth-history" class="space-y-2"></div>
+    </section>
+
+    <!-- ============ VACCINES ============ -->
+    <section id="panel-vaccines" class="tab-panel space-y-4 pt-1">
+      <div class="flex items-start justify-between">
+        <div>
+          <h2 class="text-2xl font-bold">Jadwal Imunisasi</h2>
+          <p id="vax-sub" class="text-sm text-on-surface-variant mt-1"></p>
+        </div>
+        <button onclick="openVaccineModal()" class="no-print shrink-0 w-9 h-9 rounded-full bg-primary text-on-primary flex items-center justify-center mt-1">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+      <div class="bg-surface rounded-xl2 p-5 shadow-sm">
+        <p class="text-xs uppercase tracking-widest text-on-surface-variant">Progres Keseluruhan</p>
+        <h3 id="vax-progress-headline" class="text-xl font-bold mt-1"></h3>
+        <div class="h-2 rounded-full bg-surface-container-high mt-3 overflow-hidden">
+          <div id="vax-progress-bar" class="h-full bg-primary rounded-full" style="width:0%"></div>
+        </div>
+        <div class="flex justify-between text-xs text-on-surface-variant mt-2">
+          <span id="vax-next-label"></span>
+          <span id="vax-progress-pct"></span>
+        </div>
+      </div>
+      <div>
+        <h3 class="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-2">Akan Datang</h3>
+        <div id="vax-upcoming" class="bg-surface rounded-xl2 shadow-sm divide-y divide-outline/40"></div>
+      </div>
+      <div>
+        <h3 class="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-2">Selesai</h3>
+        <div id="vax-completed" class="bg-surface rounded-xl2 shadow-sm divide-y divide-outline/40"></div>
+      </div>
+    </section>
+
+    <!-- ============ REPORTS ============ -->
+    <section id="panel-reports" class="tab-panel space-y-4 pt-1">
+      <div>
+        <h2 class="text-2xl font-bold">Laporan</h2>
+        <p class="text-sm text-on-surface-variant mt-1">Ringkasan pertumbuhan, pencapaian, dan imunisasi Leo.</p>
+      </div>
+      <div class="flex bg-surface-container rounded-full p-1 text-sm font-semibold w-fit">
+        <button id="rep-toggle-monthly" onclick="setReportPeriod('monthly')" class="chip active px-4 py-1.5 rounded-full">Bulanan</button>
+        <button id="rep-toggle-annual" onclick="setReportPeriod('annual')" class="chip px-4 py-1.5 rounded-full">Tahunan</button>
+      </div>
+
+      <div class="bg-surface rounded-xl2 p-5 shadow-sm">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M4 16l5-5 4 4 7-8M20 7v6M14 7h6"/></svg>
+        <h3 class="font-bold mt-2">Pertumbuhan &amp; Analisis</h3>
+        <p id="rep-growth-copy" class="text-sm text-on-surface-variant mt-1"></p>
+      </div>
+      <div class="bg-surface rounded-xl2 p-5 shadow-sm">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M11 3l1.2 4.3L16 8.5l-3.8 1.2L11 14l-1.2-4.3L6 8.5l3.8-1.2L11 3Z"/><path d="M18 14l.7 2.3L21 17l-2.3.7L18 20l-.7-2.3L15 17l2.3-.7L18 14Z"/></svg>
+        <h3 class="font-bold mt-2">Pencapaian</h3>
+        <p id="rep-milestone-copy" class="text-sm text-on-surface-variant mt-1"></p>
+        <div id="rep-milestone-chips" class="flex flex-wrap gap-2 mt-3"></div>
+      </div>
+      <div class="bg-surface rounded-xl2 p-5 shadow-sm">
+        <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+        <h3 class="font-bold mt-2">Imunisasi</h3>
+        <p id="rep-vax-copy" class="text-sm text-on-surface-variant mt-1"></p>
+        <div class="h-1.5 rounded-full bg-surface-container-high mt-2">
+          <div id="rep-vax-bar" class="h-full bg-primary rounded-full" style="width:0%"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Floating add button (dashboard/journal) -->
+  <button id="fab" onclick="openMilestoneModal()" class="no-print fixed bottom-24 w-14 h-14 rounded-full bg-primary text-on-primary shadow-lg flex items-center justify-center z-30">
+    <svg class="icon-lg" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+
+  <!-- Bottom nav -->
+  <nav id="bottom-nav" class="no-print fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-surface border-t border-outline/40 flex justify-around items-center py-2 z-30">
+    <button class="nav-btn active flex flex-col items-center gap-0.5 text-on-surface-variant text-xs font-semibold px-4 py-1" onclick="switchTab('dashboard')">
+      <span class="nav-pill px-3 py-0.5 rounded-full"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/></svg></span>
+      Beranda
+    </button>
+    <button class="nav-btn flex flex-col items-center gap-0.5 text-on-surface-variant text-xs font-semibold px-4 py-1" onclick="switchTab('journal')">
+      <span class="nav-pill px-3 py-0.5 rounded-full"><svg class="icon" viewBox="0 0 24 24"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H12v16H5.5A1.5 1.5 0 0 1 4 18.5v-13Z"/><path d="M20 5.5c0-.8-.7-1.5-1.5-1.5H12v16h6.5a1.5 1.5 0 0 0 1.5-1.5v-13Z"/></svg></span>
+      Jurnal
+    </button>
+    <button class="nav-btn flex flex-col items-center gap-0.5 text-on-surface-variant text-xs font-semibold px-4 py-1" onclick="switchTab('vaccines')">
+      <span class="nav-pill px-3 py-0.5 rounded-full"><svg class="icon" viewBox="0 0 24 24"><path d="m18 2 4 4-2 2-1-1-2.5 2.5 1.5 1.5-1.4 1.4-1.5-1.5-4.9 4.9L12 17l-1.4 1.4-1.8-1.8L7.4 18 6 16.6l1.4-1.4-1.8-1.8L4 12l1.7-1.7 4.9-4.9-1.5-1.5L10.5 2.5l1.5 1.5L14.5 1.5 15.5 3l-1 1L18 2Z"/></svg></span>
+      Imunisasi
+    </button>
+    <button class="nav-btn flex flex-col items-center gap-0.5 text-on-surface-variant text-xs font-semibold px-4 py-1" onclick="switchTab('reports')">
+      <span class="nav-pill px-3 py-0.5 rounded-full"><svg class="icon" viewBox="0 0 24 24"><path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></span>
+      Laporan
+    </button>
+  </nav>
+</div>
+
+
+<!-- Milestone modal -->
+<div id="milestone-modal" class="hidden fixed inset-0 z-40 bg-black/40 flex items-end justify-center">
+  <div class="bg-surface w-full max-w-md rounded-t-2xl p-5 space-y-3 max-h-[85vh] overflow-y-auto">
+    <div class="flex items-center justify-between">
+      <h3 class="font-bold text-lg">Pencapaian Baru</h3>
+      <button onclick="closeMilestoneModal()" class="text-on-surface-variant"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <input id="m-title" type="text" placeholder="Judul (mis. Langkah Pertama)" class="w-full rounded-lg border border-outline px-3 py-2 text-sm">
+    <textarea id="m-note" placeholder="Apa yang terjadi?" rows="3" class="w-full rounded-lg border border-outline px-3 py-2 text-sm"></textarea>
+    <div class="grid grid-cols-2 gap-3">
+      <input id="m-date" type="date" class="w-full rounded-lg border border-outline px-3 py-2 text-sm">
+      <select id="m-category" class="w-full rounded-lg border border-outline px-3 py-2 text-sm">
+        <option>Fisik</option>
+        <option>Sosial</option>
+        <option>Tidur</option>
+        <option>Makan</option>
+        <option>Kognitif</option>
+      </select>
+    </div>
+    <button onclick="saveMilestone()" class="w-full bg-primary text-on-primary rounded-full py-2.5 text-sm font-semibold">Simpan Pencapaian</button>
+  </div>
+</div>
+
+<!-- Vaccine modal -->
+<div id="vaccine-modal" class="hidden fixed inset-0 z-40 bg-black/40 flex items-end justify-center">
+  <div class="bg-surface w-full max-w-md rounded-t-2xl p-5 space-y-3 max-h-[85vh] overflow-y-auto">
+    <div class="flex items-center justify-between">
+      <h3 class="font-bold text-lg">Tambah Vaksin</h3>
+      <button onclick="closeVaccineModal()" class="text-on-surface-variant"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <p class="text-xs text-on-surface-variant -mt-1">Sesuaikan nama dan jenis vaksin dengan jadwal IDAI/Kemenkes atau anjuran dokter anak Anda.</p>
+    <input id="v-name" type="text" placeholder="Nama vaksin (mis. DPT-HB-Hib 4)" class="w-full rounded-lg border border-outline px-3 py-2 text-sm">
+    <input id="v-due" type="text" placeholder="Usia dianjurkan (mis. 18 Bulan)" class="w-full rounded-lg border border-outline px-3 py-2 text-sm">
+    <div class="grid grid-cols-2 gap-3">
+      <input id="v-date" type="date" class="w-full rounded-lg border border-outline px-3 py-2 text-sm">
+      <select id="v-status" class="w-full rounded-lg border border-outline px-3 py-2 text-sm">
+        <option value="upcoming">Akan datang</option>
+        <option value="done">Sudah diberikan</option>
+      </select>
+    </div>
+    <button onclick="saveVaccine()" class="w-full bg-primary text-on-primary rounded-full py-2.5 text-sm font-semibold">Simpan Vaksin</button>
+  </div>
+</div>
+
+<!-- Profile modal -->
+<div id="profile-modal" class="hidden fixed inset-0 z-40 bg-black/40 flex items-end justify-center">
+  <div class="bg-surface w-full max-w-md rounded-t-2xl p-5 space-y-3">
+    <div class="flex items-center justify-between">
+      <h3 class="font-bold text-lg">Profil Bayi</h3>
+      <button onclick="closeProfileModal()" class="text-on-surface-variant"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <input id="p-name" type="text" placeholder="Nama" class="w-full rounded-lg border border-outline px-3 py-2 text-sm">
+    <input id="p-dob" type="date" class="w-full rounded-lg border border-outline px-3 py-2 text-sm">
+    <button onclick="saveProfile()" class="w-full bg-primary text-on-primary rounded-full py-2.5 text-sm font-semibold">Simpan</button>
+    <button onclick="resetData()" class="w-full text-error text-sm font-semibold py-2">Reset semua data</button>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'jejaksikecil_data_v1';
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+function defaultData(){
+  const today = new Date();
+  const dob = new Date(today); dob.setMonth(dob.getMonth()-6);
+  const fmt = d => d.toISOString().slice(0,10);
+  const at = (m) => fmt(new Date(dob.getFullYear(), dob.getMonth()+m, dob.getDate()));
+  return {
+    profile: { name: 'Leo', dob: fmt(dob) },
+    measurements: [
+      { date: fmt(new Date(dob)), label: 'Lahir', weight: 3.4, height: 50.5 },
+      { date: at(2), label: '2 bln', weight: 5.6, height: 58.4 },
+      { date: at(4), label: '4 bln', weight: 6.9, height: 63.9 },
+      { date: fmt(today), label: 'Sekarang', weight: 7.8, height: 68.2 },
+    ],
+    milestones: [
+      { id: uid(), title: 'Duduk Tanpa Bantuan', note: 'Berhasil setelah banyak percobaan!', date: fmt(today), category: 'Fisik' },
+      { id: uid(), title: 'Senyum Sosial Pertama', note: "Memberikan senyum penuh arti saat kami menyanyikan 'Twinkle Twinkle'.", date: fmt(new Date(today.getFullYear(), today.getMonth()-1, 12)), category: 'Sosial' },
+      { id: uid(), title: 'Tidur 5 Jam Berturut-turut', note: 'Tidur dari jam 11 malam sampai jam 4 pagi — sungguh melegakan.', date: fmt(new Date(today.getFullYear(), today.getMonth()-1, 5)), category: 'Tidur' },
+    ],
+    vaccines: [
+      { id: uid(), name: 'Hepatitis B (HB-0)', due: 'Saat Lahir', date: fmt(dob), status: 'done' },
+      { id: uid(), name: 'BCG', due: '1 Bulan', date: at(1), status: 'done' },
+      { id: uid(), name: 'Polio Tetes (OPV 1)', due: '1 Bulan', date: at(1), status: 'done' },
+      { id: uid(), name: 'DPT-HB-Hib 1', due: '2 Bulan', date: at(2), status: 'done' },
+      { id: uid(), name: 'PCV 1', due: '2 Bulan', date: at(2), status: 'done' },
+      { id: uid(), name: 'Rotavirus 1', due: '2 Bulan', date: at(2), status: 'done' },
+      { id: uid(), name: 'DPT-HB-Hib 2', due: '3 Bulan', date: at(3), status: 'done' },
+      { id: uid(), name: 'PCV 2', due: '3 Bulan', date: at(3), status: 'done' },
+      { id: uid(), name: 'DPT-HB-Hib 3', due: '4 Bulan', date: at(4), status: 'done' },
+      { id: uid(), name: 'Polio Suntik (IPV)', due: '4 Bulan', date: at(4), status: 'done' },
+      { id: uid(), name: 'Campak/MR', due: '9 Bulan', date: at(9), status: 'upcoming' },
+      { id: uid(), name: 'PCV Booster', due: '12 Bulan', date: at(12), status: 'upcoming' },
+    ],
+  };
+}
+
+let data;
+try {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  data = raw ? JSON.parse(raw) : defaultData();
+} catch(e) { data = defaultData(); }
+// Backfill ids for any legacy entries missing them
+(data.milestones||[]).forEach(m => { if(!m.id) m.id = uid(); });
+(data.vaccines||[]).forEach(v => { if(!v.id) v.id = uid(); });
+
+function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+
+function ageString(dobStr){
+  const dob = new Date(dobStr), now = new Date();
+  let months = (now.getFullYear()-dob.getFullYear())*12 + (now.getMonth()-dob.getMonth());
+  if (now.getDate() < dob.getDate()) months--;
+  if (months < 1) { const days = Math.floor((now-dob)/86400000); return `${days} hari`; }
+  if (months < 24) return `${months} bulan`;
+  return `${Math.floor(months/12)} thn ${months%12} bln`;
+}
+
+const MONTHS_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+function fmtDate(str){
+  const d = new Date(str+'T00:00:00');
+  return `${d.getDate()} ${MONTHS_ID[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+let currentTab = 'dashboard';
+let chartMode = 'weight';
+let journalFilter = 'Semua';
+let journalView = 'timeline';
+let reportPeriod = 'monthly';
+let calMonth = new Date(); calMonth.setDate(1);
+let calSelected = new Date().toISOString().slice(0,10);
+
+function switchTab(tab){
+  currentTab = tab;
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+tab).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  const map = { dashboard:0, journal:1, vaccines:2, reports:3 };
+  if (tab in map) document.querySelectorAll('.nav-btn')[map[tab]].classList.add('active');
+  document.getElementById('fab').style.display = (tab==='dashboard'||tab==='journal') ? 'flex' : 'none';
+  window.scrollTo(0,0);
+  renderAll();
+}
+
+function setChartMode(mode){ chartMode = mode;
+  document.getElementById('chart-toggle-weight').classList.toggle('active', mode==='weight');
+  document.getElementById('chart-toggle-height').classList.toggle('active', mode==='height');
+  renderChart();
+}
+function setJournalView(v){
+  journalView = v;
+  document.getElementById('journal-view-timeline').classList.toggle('active', v==='timeline');
+  document.getElementById('journal-view-calendar').classList.toggle('active', v==='calendar');
+  document.getElementById('journal-timeline-view').classList.toggle('active', v==='timeline');
+  document.getElementById('journal-calendar-view').classList.toggle('active', v==='calendar');
+  if (v==='calendar') renderCalendar();
+}
+function setReportPeriod(p){
+  reportPeriod = p;
+  document.getElementById('rep-toggle-monthly').classList.toggle('active', p==='monthly');
+  document.getElementById('rep-toggle-annual').classList.toggle('active', p==='annual');
+  renderReports();
+}
+
+function renderDashboard(){
+  const m = data.measurements[data.measurements.length-1] || {};
+  document.getElementById('dash-age-headline').textContent = `${data.profile.name} berusia ${ageString(data.profile.dob)}`;
+  document.getElementById('dash-age-sub').textContent = 'Tumbuh dengan baik — lihat catatan untuk detail terbaru.';
+  document.getElementById('dash-weight').textContent = m.weight ?? '–';
+  document.getElementById('dash-height').textContent = m.height ?? '–';
+
+  const upcoming = data.vaccines.filter(v=>v.status==='upcoming').sort((a,b)=>a.date.localeCompare(b.date))[0];
+  const box = document.getElementById('dash-next-vaccine');
+  if (upcoming){
+    box.innerHTML = `
+      <p class="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-1">
+        <svg class="icon-sm" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+        Vaksin Berikutnya
+      </p>
+      <h3 class="text-xl font-bold mt-1">${escapeHtml(upcoming.due)}</h3>
+      <p class="text-sm text-on-surface-variant mt-1">${escapeHtml(upcoming.name)} dijadwalkan ${fmtDate(upcoming.date)}.</p>
+      <button onclick="switchTab('vaccines')" class="mt-3 w-full bg-primary text-on-primary rounded-full py-2 text-sm font-semibold">Lihat Jadwal Imunisasi</button>`;
+  } else {
+    box.innerHTML = `<p class="text-sm text-on-surface-variant">Semua imunisasi sudah lengkap 🎉</p>`;
+  }
+
+  const recent = [...data.milestones].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,4);
+  document.getElementById('dash-milestones').innerHTML = recent.map(ms => `
+    <div class="min-w-[150px] bg-surface rounded-xl2 p-4 shadow-sm">
+      <div class="text-2xl">${categoryEmoji(ms.category)}</div>
+      <h4 class="font-bold text-sm mt-2">${escapeHtml(ms.title)}</h4>
+      <p class="text-xs text-on-surface-variant mt-1 line-clamp-2">${escapeHtml(ms.note||'')}</p>
+      <p class="text-[11px] text-on-surface-variant mt-2">${fmtDate(ms.date)}</p>
+    </div>`).join('') || `<p class="text-sm text-on-surface-variant">Belum ada pencapaian.</p>`;
+
+  renderChart();
+}
+
+function categoryEmoji(cat){
+  return { Fisik:'💪', Sosial:'😊', Tidur:'🌙', Makan:'🍽️', Kognitif:'🧠' }[cat] || '✨';
+}
+
+function renderChart(){
+  const pts = data.measurements;
+  const svg = document.getElementById('growth-chart');
+  const labels = document.getElementById('chart-labels');
+  if (!pts.length){ svg.innerHTML=''; labels.innerHTML=''; return; }
+  const vals = pts.map(p => chartMode==='weight' ? p.weight : p.height);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const pad = (max-min)*0.2 || 1;
+  const lo = min-pad, hi = max+pad;
+  const w = 320, h = 140, mx = 10, my = 10;
+  const stepX = pts.length>1 ? (w-2*mx)/(pts.length-1) : 0;
+  const coords = vals.map((v,i)=>{
+    const x = mx + i*stepX;
+    const y = my + (h-2*my) * (1 - (v-lo)/(hi-lo));
+    return [x,y];
+  });
+  const linePath = coords.map((c,i)=> (i===0?'M':'L')+c[0].toFixed(1)+','+c[1].toFixed(1)).join(' ');
+  const areaPath = linePath + ` L${coords[coords.length-1][0]},${h-my} L${coords[0][0]},${h-my} Z`;
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#4a654e" stop-opacity="0.25"/>
+        <stop offset="100%" stop-color="#4a654e" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <path d="${areaPath}" fill="url(#areaGrad)"/>
+    <path d="${linePath}" fill="none" stroke="#4a654e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    ${coords.map(c=>`<circle cx="${c[0]}" cy="${c[1]}" r="3.5" fill="#4a654e"/>`).join('')}
+  `;
+  labels.innerHTML = pts.map(p=>`<span>${escapeHtml(p.label)}</span>`).join('');
+}
+
+function addMeasurement(){
+  const weight = parseFloat(document.getElementById('g-weight').value);
+  const height = parseFloat(document.getElementById('g-height').value);
+  const date = document.getElementById('g-date').value || new Date().toISOString().slice(0,10);
+  const label = document.getElementById('g-label').value || fmtDate(date);
+  if (isNaN(weight) && isNaN(height)) { alert('Isi minimal berat atau tinggi badan.'); return; }
+  data.measurements.push({ date, label, weight: isNaN(weight)?null:weight, height: isNaN(height)?null:height });
+  data.measurements.sort((a,b)=>a.date.localeCompare(b.date));
+  save();
+  document.getElementById('g-weight').value='';
+  document.getElementById('g-height').value='';
+  document.getElementById('g-label').value='';
+  renderAll();
+  switchTab('dashboard');
+}
+
+function renderGrowthLog(){
+  const list = [...data.measurements].sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('growth-history').innerHTML = list.map(m => `
+    <div class="bg-surface rounded-xl2 p-4 shadow-sm flex items-center justify-between">
+      <div>
+        <p class="font-bold text-sm">${escapeHtml(m.label)}</p>
+        <p class="text-xs text-on-surface-variant">${fmtDate(m.date)}</p>
+      </div>
+      <div class="text-right text-sm">
+        ${m.weight!=null ? `<p>${m.weight} kg</p>`:''}
+        ${m.height!=null ? `<p class="text-on-surface-variant">${m.height} cm</p>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function renderJournal(){
+  document.getElementById('journal-sub').textContent = `Merekam momen-momen kecil di tahun pertama ${data.profile.name}.`;
+  const cats = ['Semua','Fisik','Sosial','Tidur','Makan','Kognitif'];
+  const sel = document.getElementById('journal-filter-select');
+  sel.innerHTML = cats.map(c => `<option value="${c}" ${c===journalFilter?'selected':''}>${c==='Semua' ? 'Semua kategori' : c}</option>`).join('');
+
+  let list = [...data.milestones].sort((a,b)=>b.date.localeCompare(a.date));
+  if (journalFilter !== 'Semua') list = list.filter(m=>m.category===journalFilter);
+
+  document.getElementById('journal-empty').classList.toggle('hidden', list.length>0);
+  document.getElementById('journal-timeline').innerHTML = list.map((ms,idx) => `
+    <div class="relative pl-8">
+      <div class="absolute left-0 top-0 w-7 h-7 rounded-full bg-primary-container flex items-center justify-center text-sm">${categoryEmoji(ms.category)}</div>
+      ${idx < list.length-1 ? '<div class="absolute left-3.5 top-7 bottom-[-16px] w-px bg-outline"></div>' : ''}
+      <div class="bg-surface rounded-xl2 p-4 shadow-sm">
+        <div class="flex items-center justify-between">
+          <p class="text-xs text-on-surface-variant">${fmtDate(ms.date)}</p>
+          <span class="text-[10px] font-bold uppercase tracking-wide bg-secondary-container text-secondary px-2 py-0.5 rounded-full">${escapeHtml(ms.category)}</span>
+        </div>
+        <h4 class="font-bold mt-1">${escapeHtml(ms.title)}</h4>
+        <p class="text-sm text-on-surface-variant mt-1">${escapeHtml(ms.note||'')}</p>
+      </div>
+    </div>`).join('');
+
+  if (journalView === 'calendar') renderCalendar();
+}
+function setJournalFilter(c){ journalFilter = c; renderJournal(); }
+
+function renderCalendar(){
+  const year = calMonth.getFullYear(), month = calMonth.getMonth();
+  document.getElementById('cal-month-label').textContent = `${MONTHS_ID[month]} ${year}`;
+
+  const eventDates = {};
+  data.milestones.forEach(m => { eventDates[m.date] = (eventDates[m.date]||0)+1; });
+
+  const firstDay = new Date(year, month, 1);
+  const startOffset = firstDay.getDay(); // 0=Sunday
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const todayStr = new Date().toISOString().slice(0,10);
+
+  let cells = '';
+  for (let i=0; i<startOffset; i++) cells += `<div></div>`;
+  for (let d=1; d<=daysInMonth; d++){
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const hasEvent = !!eventDates[dateStr];
+    const isSelected = dateStr === calSelected;
+    const isToday = dateStr === todayStr;
+    cells += `<button onclick="selectCalDate('${dateStr}')" class="cal-day ${hasEvent?'has-event':''} ${isSelected?'selected':''} rounded-lg flex flex-col items-center justify-center text-xs relative ${isToday?'font-bold text-primary':''}">
+        ${d}
+        ${hasEvent ? '<span class="w-1 h-1 rounded-full bg-primary absolute bottom-1"></span>' : ''}
+      </button>`;
+  }
+  document.getElementById('cal-grid').innerHTML = cells;
+
+  const list = data.milestones.filter(m=>m.date===calSelected).sort((a,b)=>a.title.localeCompare(b.title));
+  document.getElementById('cal-selected-label').textContent = fmtDate(calSelected);
+  document.getElementById('cal-selected-list').innerHTML = list.map(ms => `
+    <div class="bg-surface rounded-xl2 p-4 shadow-sm flex gap-3">
+      <div class="text-xl">${categoryEmoji(ms.category)}</div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h4 class="font-bold text-sm">${escapeHtml(ms.title)}</h4>
+          <span class="text-[10px] font-bold uppercase tracking-wide bg-secondary-container text-secondary px-2 py-0.5 rounded-full">${escapeHtml(ms.category)}</span>
+        </div>
+        <p class="text-sm text-on-surface-variant mt-1">${escapeHtml(ms.note||'')}</p>
+      </div>
+    </div>`).join('') || `<p class="text-sm text-on-surface-variant py-4 text-center">Tidak ada pencapaian pada tanggal ini.</p>`;
+}
+function shiftCalendarMonth(delta){
+  calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth()+delta, 1);
+  renderCalendar();
+}
+function selectCalDate(dateStr){
+  calSelected = dateStr;
+  renderCalendar();
+}
+
+function renderVaccines(){
+  const total = data.vaccines.length;
+  const done = data.vaccines.filter(v=>v.status==='done').length;
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('vax-sub').textContent = `Pantau perjalanan imunisasi ${data.profile.name}.`;
+  document.getElementById('vax-progress-headline').textContent = `${done} dari ${total} Vaksin Selesai`;
+  document.getElementById('vax-progress-bar').style.width = pct+'%';
+  document.getElementById('vax-progress-pct').textContent = pct+'%';
+  const next = data.vaccines.filter(v=>v.status==='upcoming').sort((a,b)=>a.date.localeCompare(b.date))[0];
+  document.getElementById('vax-next-label').textContent = next ? `Berikutnya: ${next.due}` : 'Semua sudah lengkap';
+
+  const upcoming = data.vaccines.filter(v=>v.status==='upcoming');
+  document.getElementById('vax-upcoming').innerHTML = upcoming.map((v) => `
+    <div class="flex items-center gap-3 p-4">
+      <div class="w-9 h-9 rounded-full bg-secondary-container flex items-center justify-center text-sm">💉</div>
+      <div class="flex-1">
+        <p class="font-semibold text-sm">${escapeHtml(v.name)}</p>
+        <p class="text-xs text-on-surface-variant">Dianjurkan: ${escapeHtml(v.due)} • ${fmtDate(v.date)}</p>
+      </div>
+      <button onclick="markVaccineDone('${v.id}')" class="text-xs font-bold text-primary border border-primary rounded-full px-3 py-1">Tandai selesai</button>
+      <button onclick="deleteVaccine('${v.id}')" class="no-print text-on-surface-variant hover:text-error">
+        <svg class="icon-sm" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></svg>
+      </button>
+    </div>`).join('') || `<p class="p-4 text-sm text-on-surface-variant">Tidak ada yang akan datang.</p>`;
+
+  const completed = data.vaccines.filter(v=>v.status==='done').sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('vax-completed').innerHTML = completed.map(v => `
+    <div class="flex items-center gap-3 p-4">
+      <div class="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary">
+        <svg class="icon-sm" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+      </div>
+      <div class="flex-1">
+        <p class="font-semibold text-sm line-through decoration-primary/30">${escapeHtml(v.name)}</p>
+        <p class="text-xs text-on-surface-variant">Diberikan: ${fmtDate(v.date)} • ${escapeHtml(v.due)}</p>
+      </div>
+      <button onclick="deleteVaccine('${v.id}')" class="no-print text-on-surface-variant hover:text-error">
+        <svg class="icon-sm" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></svg>
+      </button>
+    </div>`).join('') || `<p class="p-4 text-sm text-on-surface-variant">Belum ada yang selesai.</p>`;
+}
+function markVaccineDone(id){
+  const v = data.vaccines.find(v=>v.id===id);
+  if (v){ v.status='done'; save(); renderAll(); }
+}
+function deleteVaccine(id){
+  const v = data.vaccines.find(v=>v.id===id);
+  if (v && confirm(`Hapus "${v.name}" dari jadwal imunisasi?`)){
+    data.vaccines = data.vaccines.filter(v=>v.id!==id);
+    save(); renderAll();
+  }
+}
+
+function renderReports(){
+  const period = reportPeriod === 'monthly' ? 'bulan ini' : 'tahun ini';
+  const cutoff = new Date();
+  if (reportPeriod==='monthly') cutoff.setMonth(cutoff.getMonth()-1); else cutoff.setFullYear(cutoff.getFullYear()-1);
+  const cutoffStr = cutoff.toISOString().slice(0,10);
+
+  const recentM = data.measurements.filter(m=>m.date>=cutoffStr);
+  document.getElementById('rep-growth-copy').textContent = recentM.length
+    ? `${recentM.length} pengukuran tercatat ${period}, memantau berat dan tinggi badan dari waktu ke waktu.`
+    : `Belum ada pengukuran baru ${period}.`;
+
+  const recentMs = data.milestones.filter(m=>m.date>=cutoffStr);
+  document.getElementById('rep-milestone-copy').textContent = recentMs.length
+    ? `${recentMs.length} pencapaian tercatat ${period}.`
+    : `Belum ada pencapaian tercatat ${period}.`;
+  document.getElementById('rep-milestone-chips').innerHTML = recentMs.slice(0,6).map(m => `
+    <span class="text-xs font-semibold bg-primary/10 text-primary px-3 py-1 rounded-full flex items-center gap-1">
+      <svg class="icon-sm" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>${escapeHtml(m.title)}
+    </span>`).join('');
+
+  const total = data.vaccines.length, done = data.vaccines.filter(v=>v.status==='done').length;
+  document.getElementById('rep-vax-copy').textContent = `Catatan imunisasi dan pengingat jadwal berikutnya — ${done} dari ${total} selesai.`;
+  document.getElementById('rep-vax-bar').style.width = (total?done/total*100:0)+'%';
+}
+
+function openVaccineModal(){
+  document.getElementById('v-name').value = '';
+  document.getElementById('v-due').value = '';
+  document.getElementById('v-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('v-status').value = 'upcoming';
+  document.getElementById('vaccine-modal').classList.remove('hidden');
+}
+function closeVaccineModal(){ document.getElementById('vaccine-modal').classList.add('hidden'); }
+function saveVaccine(){
+  const name = document.getElementById('v-name').value.trim();
+  const due = document.getElementById('v-due').value.trim();
+  const date = document.getElementById('v-date').value || new Date().toISOString().slice(0,10);
+  const status = document.getElementById('v-status').value;
+  if (!name){ alert('Isi nama vaksin.'); return; }
+  data.vaccines.push({ id: uid(), name, due: due || '-', date, status });
+  save();
+  closeVaccineModal();
+  renderAll();
+  switchTab('vaccines');
+}
+
+function openMilestoneModal(){
+  document.getElementById('m-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('milestone-modal').classList.remove('hidden');
+}
+function closeMilestoneModal(){ document.getElementById('milestone-modal').classList.add('hidden'); }
+function saveMilestone(){
+  const title = document.getElementById('m-title').value.trim();
+  if (!title){ alert('Beri judul untuk pencapaian ini.'); return; }
+  data.milestones.push({
+    id: uid(),
+    title,
+    note: document.getElementById('m-note').value.trim(),
+    date: document.getElementById('m-date').value || new Date().toISOString().slice(0,10),
+    category: document.getElementById('m-category').value,
+  });
+  save();
+  document.getElementById('m-title').value=''; document.getElementById('m-note').value='';
+  closeMilestoneModal();
+  renderAll();
+  switchTab('journal');
+}
+
+function openProfileModal(){
+  document.getElementById('p-name').value = data.profile.name;
+  document.getElementById('p-dob').value = data.profile.dob;
+  document.getElementById('profile-modal').classList.remove('hidden');
+}
+function closeProfileModal(){ document.getElementById('profile-modal').classList.add('hidden'); }
+function saveProfile(){
+  data.profile.name = document.getElementById('p-name').value.trim() || data.profile.name;
+  data.profile.dob = document.getElementById('p-dob').value || data.profile.dob;
+  save(); closeProfileModal(); renderAll();
+}
+function resetData(){
+  if (confirm('Reset semua data pertumbuhan, pencapaian, dan imunisasi?')){
+    localStorage.removeItem(STORAGE_KEY);
+    data = defaultData();
+    save(); closeProfileModal(); renderAll();
+  }
+}
+
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function renderAll(){
+  renderDashboard();
+  renderGrowthLog();
+  renderJournal();
+  renderVaccines();
+  renderReports();
+}
+
+renderAll();
+
+// Register service worker for offline support (works once hosted, e.g. on GitHub Pages)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
