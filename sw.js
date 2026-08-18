@@ -1,7 +1,7 @@
 // Jejak Si Kecil — offline service worker
 // Bump this whenever any cached file changes, so browsers pick up the new
 // version instead of silently serving what they cached before.
-const CACHE_NAME = 'jejak-si-kecil-v6';
+const CACHE_NAME = 'jejak-si-kecil-v8';
 
 const PRECACHE_FILES = [
   './',
