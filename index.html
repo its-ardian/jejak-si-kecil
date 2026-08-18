@@ -60,7 +60,6 @@
       <div class="bg-surface rounded-xl2 p-5 shadow-sm">
         <p class="text-xs font-bold tracking-widest text-primary uppercase">Ringkasan Hari Ini</p>
         <h2 id="dash-age-headline" class="text-2xl font-bold mt-1"></h2>
-        <p id="dash-age-sub" class="text-sm text-on-surface-variant mt-1"></p>
       </div>
 
       <div class="bg-primary text-on-primary rounded-xl2 p-5 shadow-sm grid grid-cols-2 gap-4">
@@ -186,6 +185,15 @@
       </div>
     </section>
 
+    <!-- ============ MEDICAL HISTORY ============ -->
+    <section id="panel-medical" class="tab-panel space-y-4 pt-1">
+      <div>
+        <h2 class="text-2xl font-bold">Riwayat Medis</h2>
+        <p id="medical-sub" class="text-sm text-on-surface-variant mt-1"></p>
+      </div>
+      <div id="medical-list" class="space-y-3"></div>
+    </section>
+
     <!-- ============ REPORTS ============ -->
     <section id="panel-reports" class="tab-panel space-y-4 pt-1">
       <div>
@@ -227,19 +235,23 @@
 
   <!-- Bottom nav -->
   <nav id="bottom-nav" class="no-print fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-surface border-t border-outline/40 flex justify-around items-center py-2 z-30">
-    <button class="nav-btn active flex flex-col items-center gap-0.5 text-on-surface-variant text-xs font-semibold px-4 py-1" onclick="switchTab('dashboard')">
+    <button class="nav-btn active flex flex-col items-center gap-0.5 text-on-surface-variant text-xs font-semibold px-2 py-1" onclick="switchTab('dashboard')">
       <span class="nav-pill px-3 py-0.5 rounded-full"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/></svg></span>
       Beranda
     </button>
-    <button class="nav-btn flex flex-col items-center gap-0.5 text-on-surface-variant text-xs font-semibold px-4 py-1" onclick="switchTab('journal')">
+    <button class="nav-btn flex flex-col items-center gap-0.5 text-on-surface-variant text-xs font-semibold px-2 py-1" onclick="switchTab('journal')">
       <span class="nav-pill px-3 py-0.5 rounded-full"><svg class="icon" viewBox="0 0 24 24"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H12v16H5.5A1.5 1.5 0 0 1 4 18.5v-13Z"/><path d="M20 5.5c0-.8-.7-1.5-1.5-1.5H12v16h6.5a1.5 1.5 0 0 0 1.5-1.5v-13Z"/></svg></span>
       Jurnal
     </button>
-    <button class="nav-btn flex flex-col items-center gap-0.5 text-on-surface-variant text-xs font-semibold px-4 py-1" onclick="switchTab('vaccines')">
+    <button class="nav-btn flex flex-col items-center gap-0.5 text-on-surface-variant text-xs font-semibold px-2 py-1" onclick="switchTab('vaccines')">
       <span class="nav-pill px-3 py-0.5 rounded-full"><svg class="icon" viewBox="0 0 24 24"><path d="m18 2 4 4-2 2-1-1-2.5 2.5 1.5 1.5-1.4 1.4-1.5-1.5-4.9 4.9L12 17l-1.4 1.4-1.8-1.8L7.4 18 6 16.6l1.4-1.4-1.8-1.8L4 12l1.7-1.7 4.9-4.9-1.5-1.5L10.5 2.5l1.5 1.5L14.5 1.5 15.5 3l-1 1L18 2Z"/></svg></span>
       Imunisasi
     </button>
-    <button class="nav-btn flex flex-col items-center gap-0.5 text-on-surface-variant text-xs font-semibold px-4 py-1" onclick="switchTab('reports')">
+    <button class="nav-btn flex flex-col items-center gap-0.5 text-on-surface-variant text-xs font-semibold px-2 py-1" onclick="switchTab('medical')">
+      <span class="nav-pill px-3 py-0.5 rounded-full"><svg class="icon" viewBox="0 0 24 24"><path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M14 3v5h5"/><path d="M12 12v5M9.5 14.5h5"/></svg></span>
+      Medis
+    </button>
+    <button class="nav-btn flex flex-col items-center gap-0.5 text-on-surface-variant text-xs font-semibold px-2 py-1" onclick="switchTab('reports')">
       <span class="nav-pill px-3 py-0.5 rounded-full"><svg class="icon" viewBox="0 0 24 24"><path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></span>
       Laporan
     </button>
@@ -291,6 +303,23 @@
   </div>
 </div>
 
+<!-- Medical record modal -->
+<div id="medical-modal" class="hidden fixed inset-0 z-40 bg-black/40 flex items-end justify-center">
+  <div class="bg-surface w-full max-w-md rounded-t-2xl p-5 space-y-3 max-h-[85vh] overflow-y-auto">
+    <div class="flex items-center justify-between">
+      <h3 class="font-bold text-lg">Catatan Medis Baru</h3>
+      <button onclick="closeMedicalModal()" class="text-on-surface-variant"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <input id="med-title" type="text" placeholder="Judul (mis. Pemeriksaan Demam)" class="w-full rounded-lg border border-outline px-3 py-2 text-sm">
+    <input id="med-date" type="date" class="w-full rounded-lg border border-outline px-3 py-2 text-sm">
+    <input id="med-doctor" type="text" placeholder="Nama dokter" class="w-full rounded-lg border border-outline px-3 py-2 text-sm">
+    <input id="med-hospital" type="text" placeholder="Rumah sakit / klinik" class="w-full rounded-lg border border-outline px-3 py-2 text-sm">
+    <input id="med-medicine" type="text" placeholder="Obat yang diberikan" class="w-full rounded-lg border border-outline px-3 py-2 text-sm">
+    <textarea id="med-note" placeholder="Catatan tambahan" rows="3" class="w-full rounded-lg border border-outline px-3 py-2 text-sm"></textarea>
+    <button onclick="saveMedicalRecord()" class="w-full bg-primary text-on-primary rounded-full py-2.5 text-sm font-semibold">Simpan Catatan</button>
+  </div>
+</div>
+
 <!-- Profile modal -->
 <div id="profile-modal" class="hidden fixed inset-0 z-40 bg-black/40 flex items-end justify-center">
   <div class="bg-surface w-full max-w-md rounded-t-2xl p-5 space-y-3">
@@ -327,6 +356,7 @@ function emptyData(){
     measurements: [],
     milestones: [],
     vaccines: [],
+    medicalRecords: [],
   };
 }
 
@@ -362,6 +392,9 @@ function defaultData(){
       { id: uid(), name: 'Campak/MR', due: '9 Bulan', date: at(9), status: 'upcoming' },
       { id: uid(), name: 'PCV Booster', due: '12 Bulan', date: at(12), status: 'upcoming' },
     ],
+    medicalRecords: [
+      { id: uid(), title: 'Pemeriksaan Rutin', date: at(4), doctor: 'dr. Aisyah, Sp.A', hospital: 'RS Ibu & Anak Harapan', medicine: 'Vitamin D drops', note: 'Pertumbuhan sesuai kurva, tidak ada keluhan.' },
+    ],
   };
 }
 
@@ -373,6 +406,8 @@ try {
 // Backfill ids for any legacy entries missing them
 (data.milestones||[]).forEach(m => { if(!m.id) m.id = uid(); });
 (data.vaccines||[]).forEach(v => { if(!v.id) v.id = uid(); });
+if (!data.medicalRecords) data.medicalRecords = [];
+(data.medicalRecords||[]).forEach(r => { if(!r.id) r.id = uid(); });
 
 function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
 
@@ -404,15 +439,16 @@ function switchTab(tab){
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+tab).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-  const map = { dashboard:0, journal:1, vaccines:2, reports:3 };
+  const map = { dashboard:0, journal:1, vaccines:2, medical:3, reports:4 };
   if (tab in map) document.querySelectorAll('.nav-btn')[map[tab]].classList.add('active');
-  document.getElementById('fab').style.display = (tab==='dashboard'||tab==='journal'||tab==='vaccines') ? 'flex' : 'none';
+  document.getElementById('fab').style.display = (tab==='dashboard'||tab==='journal'||tab==='vaccines'||tab==='medical') ? 'flex' : 'none';
   window.scrollTo(0,0);
   renderAll();
 }
 
 function handleFabClick(){
   if (currentTab === 'vaccines') openVaccineModal();
+  else if (currentTab === 'medical') openMedicalModal();
   else openMilestoneModal();
 }
 
@@ -439,7 +475,6 @@ function setReportPeriod(p){
 function renderDashboard(){
   const m = data.measurements[data.measurements.length-1] || {};
   document.getElementById('dash-age-headline').textContent = `${data.profile.name} berusia ${ageString(data.profile.dob)}`;
-  document.getElementById('dash-age-sub').textContent = 'Tumbuh dengan baik — lihat catatan untuk detail terbaru.';
   document.getElementById('dash-weight').textContent = m.weight ?? '–';
   document.getElementById('dash-height').textContent = m.height ?? '–';
 
@@ -678,6 +713,58 @@ function deleteVaccine(id){
   }
 }
 
+function renderMedical(){
+  document.getElementById('medical-sub').textContent = `Catatan pemeriksaan dan riwayat kesehatan ${data.profile.name}.`;
+  const list = [...(data.medicalRecords||[])].sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('medical-list').innerHTML = list.map(r => `
+    <div class="bg-surface rounded-xl2 p-4 shadow-sm">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="font-bold text-sm">${escapeHtml(r.title)}</p>
+          <p class="text-xs text-on-surface-variant mt-0.5">${fmtDate(r.date)}</p>
+        </div>
+        <button onclick="deleteMedicalRecord('${r.id}')" class="no-print shrink-0 text-on-surface-variant hover:text-error">
+          <svg class="icon-sm" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></svg>
+        </button>
+      </div>
+      ${(r.doctor||r.hospital) ? `<p class="text-xs text-on-surface-variant mt-2">${[r.doctor,r.hospital].filter(Boolean).map(escapeHtml).join(' • ')}</p>` : ''}
+      ${r.medicine ? `<p class="text-xs text-on-surface-variant mt-1">💊 ${escapeHtml(r.medicine)}</p>` : ''}
+      ${r.note ? `<p class="text-sm mt-2">${escapeHtml(r.note)}</p>` : ''}
+    </div>`).join('') || `<p class="text-sm text-on-surface-variant">Belum ada riwayat medis — tekan + untuk menambahkan yang pertama.</p>`;
+}
+function openMedicalModal(){
+  document.getElementById('med-title').value = '';
+  document.getElementById('med-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('med-doctor').value = '';
+  document.getElementById('med-hospital').value = '';
+  document.getElementById('med-medicine').value = '';
+  document.getElementById('med-note').value = '';
+  document.getElementById('medical-modal').classList.remove('hidden');
+}
+function closeMedicalModal(){ document.getElementById('medical-modal').classList.add('hidden'); }
+function saveMedicalRecord(){
+  const title = document.getElementById('med-title').value.trim();
+  const date = document.getElementById('med-date').value || new Date().toISOString().slice(0,10);
+  const doctor = document.getElementById('med-doctor').value.trim();
+  const hospital = document.getElementById('med-hospital').value.trim();
+  const medicine = document.getElementById('med-medicine').value.trim();
+  const note = document.getElementById('med-note').value.trim();
+  if (!title){ alert('Beri judul untuk catatan medis ini.'); return; }
+  if (!data.medicalRecords) data.medicalRecords = [];
+  data.medicalRecords.push({ id: uid(), title, date, doctor, hospital, medicine, note });
+  save();
+  closeMedicalModal();
+  renderAll();
+  switchTab('medical');
+}
+function deleteMedicalRecord(id){
+  const r = (data.medicalRecords||[]).find(r=>r.id===id);
+  if (r && confirm(`Hapus catatan "${r.title}"?`)){
+    data.medicalRecords = data.medicalRecords.filter(r=>r.id!==id);
+    save(); renderAll();
+  }
+}
+
 function renderReports(){
   document.getElementById('rep-sub').textContent = `Ringkasan pertumbuhan, pencapaian, dan imunisasi ${data.profile.name}.`;
   const period = reportPeriod === 'monthly' ? 'bulan ini' : 'tahun ini';
@@ -780,6 +867,7 @@ function renderAll(){
   renderGrowthLog();
   renderJournal();
   renderVaccines();
+  renderMedical();
   renderReports();
 }
 
