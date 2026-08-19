@@ -48,7 +48,7 @@
       <div class="w-9 h-9 rounded-full bg-primary-container flex items-center justify-center text-lg">🌿</div>
       <h1 class="text-lg font-bold tracking-tight">Jejak Si Kecil</h1>
     </div>
-    <button onclick="openProfileModal()" class="w-9 h-9 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container">
+    <button onclick="openSettingsPage()" class="w-9 h-9 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container">
       <svg class="icon" viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-1.7-1L15 3h-4l-.3 2.6a7.4 7.4 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 0 0 1.7 1L11 21h4l.3-2.6a7.4 7.4 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6Z"/><circle cx="12" cy="12" r="3"/></svg>
     </button>
   </header>
@@ -57,9 +57,20 @@
 
     <!-- ============ DASHBOARD ============ -->
     <section id="panel-dashboard" class="tab-panel active space-y-4 pt-1">
-      <div class="bg-surface rounded-xl2 p-5 shadow-sm">
-        <p class="text-xs font-bold tracking-widest text-primary uppercase">Ringkasan Hari Ini</p>
-        <h2 id="dash-age-headline" class="text-2xl font-bold mt-1"></h2>
+      <div class="bg-surface rounded-xl2 p-5 shadow-sm flex items-start justify-between gap-3">
+        <div class="space-y-2">
+          <div>
+            <p class="text-xs font-bold tracking-widest text-primary uppercase">Nama</p>
+            <h2 id="dash-name" class="text-2xl font-bold mt-0.5"></h2>
+          </div>
+          <div>
+            <p class="text-xs font-bold tracking-widest text-primary uppercase">Usia</p>
+            <h2 id="dash-age" class="text-2xl font-bold mt-0.5"></h2>
+          </div>
+        </div>
+        <button onclick="openEditProfileModal()" class="shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container">
+          <svg class="icon-sm" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </button>
       </div>
 
       <div class="bg-primary text-on-primary rounded-xl2 p-5 shadow-sm grid grid-cols-2 gap-4">
@@ -320,30 +331,59 @@
   </div>
 </div>
 
-<!-- Profile modal -->
-<div id="profile-modal" class="hidden fixed inset-0 z-40 bg-black/40 flex items-end justify-center">
+<!-- Settings page (full-screen): export/import + reset only -->
+<div id="settings-page" class="hidden fixed inset-0 z-40 bg-background overflow-y-auto">
+  <div class="max-w-md mx-auto min-h-screen relative">
+    <header class="sticky top-0 z-10 bg-background/90 backdrop-blur px-5 pt-5 pb-3 flex items-center gap-3">
+      <button onclick="closeSettingsPage()" class="w-9 h-9 -ml-2 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <h1 class="text-lg font-bold tracking-tight">Pengaturan</h1>
+    </header>
+
+    <div class="px-5 pb-10 space-y-6">
+      <section class="space-y-3">
+        <p class="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Cadangkan & Pindahkan Data</p>
+        <div class="bg-surface rounded-xl2 p-4 shadow-sm space-y-2">
+          <button onclick="exportData()" class="w-full flex items-center justify-center gap-2 rounded-full border border-outline py-2.5 text-sm font-semibold">
+            <svg class="icon-sm" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+            Ekspor Data (.json)
+          </button>
+          <button onclick="document.getElementById('import-file-input').click()" class="w-full flex items-center justify-center gap-2 rounded-full border border-outline py-2.5 text-sm font-semibold">
+            <svg class="icon-sm" viewBox="0 0 24 24"><path d="M12 21V9M7 14l5-5 5 5M5 3h14"/></svg>
+            Impor Data (.json)
+          </button>
+          <input id="import-file-input" type="file" accept="application/json,.json" class="hidden" onchange="importData(event)">
+          <p class="text-xs text-on-surface-variant pt-1">Ekspor untuk mencadangkan, lalu impor di ponsel baru untuk memindahkan semua data.</p>
+        </div>
+      </section>
+
+      <section class="space-y-3">
+        <p class="text-xs font-bold uppercase tracking-widest text-error">Zona Bahaya</p>
+        <div class="bg-surface rounded-xl2 p-4 shadow-sm">
+          <button onclick="resetData()" class="w-full text-error text-sm font-semibold py-2">Reset semua data</button>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- Edit profile modal (name + DOB only) -->
+<div id="edit-profile-modal" class="hidden fixed inset-0 z-40 bg-black/40 flex items-end justify-center">
   <div class="bg-surface w-full max-w-md rounded-t-2xl p-5 space-y-3">
     <div class="flex items-center justify-between">
       <h3 class="font-bold text-lg">Profil Bayi</h3>
-      <button onclick="closeProfileModal()" class="text-on-surface-variant"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      <button onclick="closeEditProfileModal()" class="text-on-surface-variant"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </div>
-    <input id="p-name" type="text" placeholder="Nama" class="w-full rounded-lg border border-outline px-3 py-2 text-sm">
-    <input id="p-dob" type="date" class="w-full rounded-lg border border-outline px-3 py-2 text-sm">
+    <div>
+      <label class="text-xs text-on-surface-variant mb-1 block">Nama</label>
+      <input id="p-name" type="text" placeholder="Nama" class="w-full rounded-lg border border-outline px-3 py-2 text-sm">
+    </div>
+    <div>
+      <label class="text-xs text-on-surface-variant mb-1 block">Tanggal Lahir</label>
+      <input id="p-dob" type="date" class="w-full rounded-lg border border-outline px-3 py-2 text-sm">
+    </div>
     <button onclick="saveProfile()" class="w-full bg-primary text-on-primary rounded-full py-2.5 text-sm font-semibold">Simpan</button>
-    <div class="pt-2 border-t border-outline/40 space-y-2">
-      <p class="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Cadangkan & Pindahkan Data</p>
-      <button onclick="exportData()" class="w-full flex items-center justify-center gap-2 rounded-full border border-outline py-2.5 text-sm font-semibold">
-        <svg class="icon-sm" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
-        Ekspor Data (.json)
-      </button>
-      <button onclick="document.getElementById('import-file-input').click()" class="w-full flex items-center justify-center gap-2 rounded-full border border-outline py-2.5 text-sm font-semibold">
-        <svg class="icon-sm" viewBox="0 0 24 24"><path d="M12 21V9M7 14l5-5 5 5M5 3h14"/></svg>
-        Impor Data (.json)
-      </button>
-      <input id="import-file-input" type="file" accept="application/json,.json" class="hidden" onchange="importData(event)">
-      <p class="text-xs text-on-surface-variant">Ekspor untuk mencadangkan, lalu impor di ponsel baru untuk memindahkan semua data.</p>
-    </div>
-    <button onclick="resetData()" class="w-full text-error text-sm font-semibold py-2">Reset semua data</button>
   </div>
 </div>
 
@@ -499,7 +539,8 @@ function setReportPeriod(p){
 
 function renderDashboard(){
   const m = data.measurements[data.measurements.length-1] || {};
-  document.getElementById('dash-age-headline').textContent = `${data.profile.name} berusia ${ageString(data.profile.dob)}`;
+  document.getElementById('dash-name').textContent = data.profile.name;
+  document.getElementById('dash-age').textContent = ageString(data.profile.dob);
   document.getElementById('dash-weight').textContent = m.weight ?? '–';
   document.getElementById('dash-height').textContent = m.height ?? '–';
 
@@ -859,17 +900,23 @@ function saveMilestone(){
   switchTab('journal');
 }
 
-function openProfileModal(){
+function openEditProfileModal(){
   document.getElementById('p-name').value = data.profile.name;
   document.getElementById('p-dob').value = data.profile.dob;
-  document.getElementById('profile-modal').classList.remove('hidden');
+  document.getElementById('edit-profile-modal').classList.remove('hidden');
 }
-function closeProfileModal(){ document.getElementById('profile-modal').classList.add('hidden'); }
+function closeEditProfileModal(){ document.getElementById('edit-profile-modal').classList.add('hidden'); }
 function saveProfile(){
   data.profile.name = document.getElementById('p-name').value.trim() || data.profile.name;
   data.profile.dob = document.getElementById('p-dob').value || data.profile.dob;
-  save(); closeProfileModal(); renderAll();
+  save();
+  closeEditProfileModal();
+  renderAll();
 }
+function openSettingsPage(){
+  document.getElementById('settings-page').classList.remove('hidden');
+}
+function closeSettingsPage(){ document.getElementById('settings-page').classList.add('hidden'); }
 function resetData(){
   document.getElementById('confirm-modal').classList.remove('hidden');
 }
@@ -881,7 +928,7 @@ function confirmResetData(){
   data = emptyData();
   save();
   closeConfirmModal();
-  closeProfileModal();
+  closeSettingsPage();
   renderAll();
 }
 
@@ -949,7 +996,7 @@ function confirmImportData(){
   save();
   _pendingImport = null;
   document.getElementById('import-confirm-modal').classList.add('hidden');
-  closeProfileModal();
+  closeSettingsPage();
   renderAll();
 }
 
