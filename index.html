@@ -330,6 +330,19 @@
     <input id="p-name" type="text" placeholder="Nama" class="w-full rounded-lg border border-outline px-3 py-2 text-sm">
     <input id="p-dob" type="date" class="w-full rounded-lg border border-outline px-3 py-2 text-sm">
     <button onclick="saveProfile()" class="w-full bg-primary text-on-primary rounded-full py-2.5 text-sm font-semibold">Simpan</button>
+    <div class="pt-2 border-t border-outline/40 space-y-2">
+      <p class="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Cadangkan & Pindahkan Data</p>
+      <button onclick="exportData()" class="w-full flex items-center justify-center gap-2 rounded-full border border-outline py-2.5 text-sm font-semibold">
+        <svg class="icon-sm" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+        Ekspor Data (.json)
+      </button>
+      <button onclick="document.getElementById('import-file-input').click()" class="w-full flex items-center justify-center gap-2 rounded-full border border-outline py-2.5 text-sm font-semibold">
+        <svg class="icon-sm" viewBox="0 0 24 24"><path d="M12 21V9M7 14l5-5 5 5M5 3h14"/></svg>
+        Impor Data (.json)
+      </button>
+      <input id="import-file-input" type="file" accept="application/json,.json" class="hidden" onchange="importData(event)">
+      <p class="text-xs text-on-surface-variant">Ekspor untuk mencadangkan, lalu impor di ponsel baru untuk memindahkan semua data.</p>
+    </div>
     <button onclick="resetData()" class="w-full text-error text-sm font-semibold py-2">Reset semua data</button>
   </div>
 </div>
@@ -341,6 +354,18 @@
     <div class="flex gap-3">
       <button onclick="closeConfirmModal()" class="flex-1 rounded-full py-2.5 text-sm font-semibold border border-outline">Batal</button>
       <button onclick="confirmResetData()" class="flex-1 bg-error text-on-error rounded-full py-2.5 text-sm font-semibold">Reset</button>
+    </div>
+  </div>
+</div>
+
+<div id="import-confirm-modal" class="hidden fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-6">
+  <div class="bg-surface w-full max-w-sm rounded-2xl p-5 space-y-4">
+    <h3 class="font-bold text-lg">Impor data ini?</h3>
+    <p id="import-confirm-detail" class="text-sm text-on-surface-variant"></p>
+    <p class="text-sm text-on-surface-variant">Data yang tersimpan saat ini di perangkat ini akan digantikan sepenuhnya.</p>
+    <div class="flex gap-3">
+      <button onclick="closeImportConfirmModal()" class="flex-1 rounded-full py-2.5 text-sm font-semibold border border-outline">Batal</button>
+      <button onclick="confirmImportData()" class="flex-1 bg-primary text-on-primary rounded-full py-2.5 text-sm font-semibold">Impor</button>
     </div>
   </div>
 </div>
@@ -856,6 +881,74 @@ function confirmResetData(){
   data = emptyData();
   save();
   closeConfirmModal();
+  closeProfileModal();
+  renderAll();
+}
+
+function exportData(){
+  const payload = {
+    app: 'jejak-si-kecil',
+    exportedAt: new Date().toISOString(),
+    data: data,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const nameSlug = (data.profile.name || 'bayi').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `jejak-si-kecil-${nameSlug}-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+let _pendingImport = null;
+function importData(event){
+  const file = event.target.files && event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let parsed;
+    try {
+      parsed = JSON.parse(reader.result);
+    } catch (e) {
+      alert('File tidak valid. Pastikan Anda memilih file .json hasil ekspor dari Jejak Si Kecil.');
+      return;
+    }
+    const incoming = parsed && parsed.data ? parsed.data : parsed;
+    if (!incoming || typeof incoming !== 'object' || !incoming.profile) {
+      alert('File tidak valid. Pastikan Anda memilih file .json hasil ekspor dari Jejak Si Kecil.');
+      return;
+    }
+    _pendingImport = incoming;
+    const name = incoming.profile.name || 'Bayi';
+    const counts = `${(incoming.measurements||[]).length} pengukuran, ${(incoming.milestones||[]).length} pencapaian, ${(incoming.vaccines||[]).length} imunisasi, ${(incoming.medicalRecords||[]).length} catatan medis`;
+    document.getElementById('import-confirm-detail').textContent = `Profil "${name}" — ${counts}.`;
+    document.getElementById('import-confirm-modal').classList.remove('hidden');
+  };
+  reader.readAsText(file);
+}
+function closeImportConfirmModal(){
+  _pendingImport = null;
+  document.getElementById('import-confirm-modal').classList.add('hidden');
+}
+function confirmImportData(){
+  if (!_pendingImport) return;
+  data = {
+    profile: _pendingImport.profile || emptyData().profile,
+    measurements: _pendingImport.measurements || [],
+    milestones: _pendingImport.milestones || [],
+    vaccines: _pendingImport.vaccines || [],
+    medicalRecords: _pendingImport.medicalRecords || [],
+  };
+  data.milestones.forEach(m => { if(!m.id) m.id = uid(); });
+  data.vaccines.forEach(v => { if(!v.id) v.id = uid(); });
+  data.medicalRecords.forEach(r => { if(!r.id) r.id = uid(); });
+  save();
+  _pendingImport = null;
+  document.getElementById('import-confirm-modal').classList.add('hidden');
   closeProfileModal();
   renderAll();
 }
