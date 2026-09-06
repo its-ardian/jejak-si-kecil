@@ -295,6 +295,24 @@
   </div>
 </div>
 
+<!-- Edit measurement modal -->
+<div id="edit-measurement-modal" class="hidden fixed inset-0 z-40 bg-black/40 flex items-end justify-center">
+  <div class="bg-surface w-full max-w-md rounded-t-2xl p-5 space-y-3">
+    <div class="flex items-center justify-between">
+      <h3 class="font-bold text-lg">Edit Pengukuran</h3>
+      <button onclick="closeEditMeasurementModal()" class="text-on-surface-variant"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <input id="em-weight" type="number" step="0.1" placeholder="Berat (kg)" class="rounded-lg border border-outline px-3 py-2 text-sm">
+      <input id="em-height" type="number" step="0.1" placeholder="Tinggi (cm)" class="rounded-lg border border-outline px-3 py-2 text-sm">
+    </div>
+    <input id="em-date" type="date" class="w-full rounded-lg border border-outline px-3 py-2 text-sm">
+    <input id="em-label" type="text" placeholder="Label (mis. Kontrol 6 bulan)" class="w-full rounded-lg border border-outline px-3 py-2 text-sm">
+    <button onclick="saveEditedMeasurement()" class="w-full bg-primary text-on-primary rounded-full py-2.5 text-sm font-semibold">Simpan Perubahan</button>
+    <button onclick="deleteMeasurement()" class="w-full text-error text-sm font-semibold py-2">Hapus Pengukuran</button>
+  </div>
+</div>
+
 <!-- Settings page (full-screen): export/import + reset only -->
 <div id="settings-page" class="hidden fixed inset-0 z-40 bg-background overflow-y-auto">
   <div class="max-w-md mx-auto min-h-screen relative">
@@ -397,10 +415,10 @@ function defaultData(){
   return {
     profile: { name: 'Leo', dob: fmt(dob) },
     measurements: [
-      { date: fmt(new Date(dob)), label: 'Lahir', weight: 3.4, height: 50.5 },
-      { date: at(2), label: '2 bln', weight: 5.6, height: 58.4 },
-      { date: at(4), label: '4 bln', weight: 6.9, height: 63.9 },
-      { date: fmt(today), label: 'Sekarang', weight: 7.8, height: 68.2 },
+      { id: uid(), date: fmt(new Date(dob)), label: 'Lahir', weight: 3.4, height: 50.5 },
+      { id: uid(), date: at(2), label: '2 bln', weight: 5.6, height: 58.4 },
+      { id: uid(), date: at(4), label: '4 bln', weight: 6.9, height: 63.9 },
+      { id: uid(), date: fmt(today), label: 'Sekarang', weight: 7.8, height: 68.2 },
     ],
     milestones: [
       { id: uid(), title: 'Duduk Tanpa Bantuan', note: 'Berhasil setelah banyak percobaan!', date: fmt(today), category: 'Fisik' },
@@ -437,6 +455,7 @@ try {
 (data.vaccines||[]).forEach(v => { if(!v.id) v.id = uid(); });
 if (!data.medicalRecords) data.medicalRecords = [];
 (data.medicalRecords||[]).forEach(r => { if(!r.id) r.id = uid(); });
+(data.measurements||[]).forEach(m => { if(!m.id) m.id = uid(); });
 
 function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
 
@@ -582,7 +601,7 @@ function addMeasurement(){
   const date = document.getElementById('g-date').value || new Date().toISOString().slice(0,10);
   const label = document.getElementById('g-label').value || fmtDate(date);
   if (isNaN(weight) && isNaN(height)) { alert('Isi minimal berat atau tinggi badan.'); return; }
-  data.measurements.push({ date, label, weight: isNaN(weight)?null:weight, height: isNaN(height)?null:height });
+  data.measurements.push({ id: uid(), date, label, weight: isNaN(weight)?null:weight, height: isNaN(height)?null:height });
   data.measurements.sort((a,b)=>a.date.localeCompare(b.date));
   save();
   document.getElementById('g-weight').value='';
@@ -595,16 +614,63 @@ function addMeasurement(){
 function renderGrowthLog(){
   const list = [...data.measurements].sort((a,b)=>b.date.localeCompare(a.date));
   document.getElementById('growth-history').innerHTML = list.map(m => `
-    <div class="bg-surface rounded-xl2 p-4 shadow-sm flex items-center justify-between">
+    <div class="bg-surface rounded-xl2 p-4 shadow-sm flex items-center justify-between gap-3">
       <div>
         <p class="font-bold text-sm">${escapeHtml(m.label)}</p>
         <p class="text-xs text-on-surface-variant">${fmtDate(m.date)}</p>
       </div>
-      <div class="text-right text-sm">
-        ${m.weight!=null ? `<p>${m.weight} kg</p>`:''}
-        ${m.height!=null ? `<p class="text-on-surface-variant">${m.height} cm</p>`:''}
+      <div class="flex items-center gap-3">
+        <div class="text-right text-sm">
+          ${m.weight!=null ? `<p>${m.weight} kg</p>`:''}
+          ${m.height!=null ? `<p class="text-on-surface-variant">${m.height} cm</p>`:''}
+        </div>
+        <button onclick="openEditMeasurementModal('${m.id}')" class="no-print shrink-0 text-on-surface-variant hover:text-primary">
+          <svg class="icon-sm" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </button>
       </div>
     </div>`).join('');
+}
+
+let _editingMeasurementId = null;
+function openEditMeasurementModal(id){
+  const m = data.measurements.find(m=>m.id===id);
+  if (!m) return;
+  _editingMeasurementId = id;
+  document.getElementById('em-weight').value = m.weight ?? '';
+  document.getElementById('em-height').value = m.height ?? '';
+  document.getElementById('em-date').value = m.date;
+  document.getElementById('em-label').value = m.label || '';
+  document.getElementById('edit-measurement-modal').classList.remove('hidden');
+}
+function closeEditMeasurementModal(){
+  _editingMeasurementId = null;
+  document.getElementById('edit-measurement-modal').classList.add('hidden');
+}
+function saveEditedMeasurement(){
+  const m = data.measurements.find(m=>m.id===_editingMeasurementId);
+  if (!m) return;
+  const weight = parseFloat(document.getElementById('em-weight').value);
+  const height = parseFloat(document.getElementById('em-height').value);
+  const date = document.getElementById('em-date').value || m.date;
+  const label = document.getElementById('em-label').value.trim() || fmtDate(date);
+  if (isNaN(weight) && isNaN(height)) { alert('Isi minimal berat atau tinggi badan.'); return; }
+  m.weight = isNaN(weight) ? null : weight;
+  m.height = isNaN(height) ? null : height;
+  m.date = date;
+  m.label = label;
+  data.measurements.sort((a,b)=>a.date.localeCompare(b.date));
+  save();
+  closeEditMeasurementModal();
+  renderAll();
+}
+function deleteMeasurement(){
+  const m = data.measurements.find(m=>m.id===_editingMeasurementId);
+  if (m && confirm(`Hapus pengukuran "${m.label}"?`)){
+    data.measurements = data.measurements.filter(x=>x.id!==_editingMeasurementId);
+    save();
+    closeEditMeasurementModal();
+    renderAll();
+  }
 }
 
 function renderJournal(){
@@ -924,6 +990,7 @@ function confirmImportData(){
   data.milestones.forEach(m => { if(!m.id) m.id = uid(); });
   data.vaccines.forEach(v => { if(!v.id) v.id = uid(); });
   data.medicalRecords.forEach(r => { if(!r.id) r.id = uid(); });
+  data.measurements.forEach(m => { if(!m.id) m.id = uid(); });
   save();
   _pendingImport = null;
   document.getElementById('import-confirm-modal').classList.add('hidden');
